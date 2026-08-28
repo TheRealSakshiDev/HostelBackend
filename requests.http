@@ -1,0 +1,106 @@
+### Login API
+
+POST http://localhost:3000/api/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+### Get all rooms
+GET http://localhost:3000/api/rooms
+### Add new room
+POST http://localhost:3000/api/rooms
+Content-Type: application/json
+
+{
+  "room_number": "R999",
+  "capacity": 400
+}
+### Update room
+PUT http://localhost:3000/api/rooms/6
+Content-Type: application/json
+
+{
+  "room_number": "R999",
+  "capacity": 450
+}
+### Delete room
+DELETE http://localhost:3000/api/rooms/6
+### Get all student groups
+GET http://localhost:3000/api/groups
+### Add student group
+POST http://localhost:3000/api/groups
+Content-Type: application/json
+
+{
+  "group_name": "Group 1",
+  "required_capacity": 212
+}
+### Add Group 2
+POST http://localhost:3000/api/groups
+Content-Type: application/json
+
+{
+  "group_name": "Group 2",
+  "required_capacity": 417
+}
+
+
+### Add Group 3
+POST http://localhost:3000/api/groups
+Content-Type: application/json
+
+{
+  "group_name": "Group 3",
+  "required_capacity": 112
+}
+
+
+### Add Group 4
+POST http://localhost:3000/api/groups
+Content-Type: application/json
+
+{
+  "group_name": "Group 4",
+  "required_capacity": 426
+}
+### Test server
+GET http://localhost:3000/
+### First Fit Allocation
+POST http://localhost:3000/api/allocate
+Content-Type: application/json
+
+{
+  "algorithm": "firstFit"
+}
+### Best Fit Allocation
+POST http://localhost:3000/api/allocate
+Content-Type: application/json
+
+{
+  "algorithm": "bestFit"
+}
+### Worst Fit Allocation
+POST http://localhost:3000/api/allocate
+Content-Type: application/json
+
+{
+  "algorithm": "worstFit"
+}
+### Get All Allocations
+GET http://localhost:3000/api/allocate
+### Get dashboard statistics
+GET http://localhost:3000/api/dashboard
+### Compare all allocation algorithms
+GET http://localhost:3000/api/compare
+### Clear allocation history
+DELETE http://localhost:3000/api/allocate
+### Register New User
+POST http://localhost:3000/api/register
+Content-Type: application/json
+
+{
+  "username": "student1",
+  "password": "student123"
+}
