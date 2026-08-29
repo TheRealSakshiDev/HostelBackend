@@ -30,29 +30,32 @@ router.get("/", (req, res) => {
 // ADD NEW ROOM
 // POST /api/rooms
 // ==========================================
+
 router.post("/", (req, res) => {
 
     const {
         room_number,
-        capacity
+        capacity,
+        floor
     } = req.body;
 
-    if (!room_number || !capacity) {
+    if (!room_number || !capacity || !floor) {
         return res.status(400).json({
-            message: "Room number and capacity are required"
+            message: "Room number, capacity and floor are required"
         });
     }
 
     const sql = `
         INSERT INTO rooms
-        (room_number, capacity, available_capacity, status)
-        VALUES (?, ?, ?, ?)
+        (room_number, capacity, available_capacity, floor, status)
+        VALUES (?, ?, ?, ?, ?)
     `;
 
     const values = [
         room_number,
         capacity,
         capacity,
+        floor,
         "Available"
     ];
 
