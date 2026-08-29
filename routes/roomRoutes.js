@@ -16,6 +16,7 @@ router.get("/", (req, res) => {
 
         if (err) {
             console.error(err);
+
             return res.status(500).json({
                 message: "Failed to fetch rooms"
             });
@@ -30,7 +31,6 @@ router.get("/", (req, res) => {
 // ADD NEW ROOM
 // POST /api/rooms
 // ==========================================
-
 router.post("/", (req, res) => {
 
     const {
@@ -39,17 +39,22 @@ router.post("/", (req, res) => {
         floor
     } = req.body;
 
+
+    // VALIDATION
     if (!room_number || !capacity || !floor) {
+
         return res.status(400).json({
             message: "Room number, capacity and floor are required"
         });
     }
 
+
     const sql = `
         INSERT INTO rooms
-        (room_number, capacity, available_capacity, floor, status)
+            (room_number, capacity, available_capacity, floor, status)
         VALUES (?, ?, ?, ?, ?)
     `;
+
 
     const values = [
         room_number,
@@ -59,9 +64,11 @@ router.post("/", (req, res) => {
         "Available"
     ];
 
+
     db.query(sql, values, (err, result) => {
 
         if (err) {
+
             console.error(err);
 
             return res.status(500).json({
@@ -69,9 +76,13 @@ router.post("/", (req, res) => {
             });
         }
 
+
         res.status(201).json({
+
             message: "Room added successfully",
+
             room_id: result.insertId
+
         });
     });
 });
@@ -85,35 +96,46 @@ router.put("/:id", (req, res) => {
 
     const roomId = req.params.id;
 
+
     const {
         room_number,
-        capacity
+        capacity,
+        floor
     } = req.body;
 
-    if (!room_number || !capacity) {
+
+    // VALIDATION
+    if (!room_number || !capacity || !floor) {
+
         return res.status(400).json({
-            message: "Room number and capacity are required"
+            message: "Room number, capacity and floor are required"
         });
     }
+
 
     const sql = `
         UPDATE rooms
         SET room_number = ?,
             capacity = ?,
-            available_capacity = ?
+            available_capacity = ?,
+            floor = ?
         WHERE room_id = ?
     `;
+
 
     const values = [
         room_number,
         capacity,
         capacity,
+        floor,
         roomId
     ];
+
 
     db.query(sql, values, (err, result) => {
 
         if (err) {
+
             console.error(err);
 
             return res.status(500).json({
@@ -121,11 +143,14 @@ router.put("/:id", (req, res) => {
             });
         }
 
+
         if (result.affectedRows === 0) {
+
             return res.status(404).json({
                 message: "Room not found"
             });
         }
+
 
         res.status(200).json({
             message: "Room updated successfully"
@@ -142,28 +167,39 @@ router.delete("/:id", (req, res) => {
 
     const roomId = req.params.id;
 
-    const sql = "DELETE FROM rooms WHERE room_id = ?";
 
-    db.query(sql, [roomId], (err, result) => {
+    const sql =
+        "DELETE FROM rooms WHERE room_id = ?";
 
-        if (err) {
-            console.error(err);
 
-            return res.status(500).json({
-                message: "Failed to delete room"
+    db.query(
+        sql,
+        [roomId],
+        (err, result) => {
+
+            if (err) {
+
+                console.error(err);
+
+                return res.status(500).json({
+                    message: "Failed to delete room"
+                });
+            }
+
+
+            if (result.affectedRows === 0) {
+
+                return res.status(404).json({
+                    message: "Room not found"
+                });
+            }
+
+
+            res.status(200).json({
+                message: "Room deleted successfully"
             });
         }
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                message: "Room not found"
-            });
-        }
-
-        res.status(200).json({
-            message: "Room deleted successfully"
-        });
-    });
+    );
 });
 
 
