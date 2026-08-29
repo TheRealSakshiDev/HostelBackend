@@ -40,7 +40,6 @@ router.post("/", (req, res) => {
     } = req.body;
 
 
-    // VALIDATION
     if (!room_number || !capacity || !floor) {
 
         return res.status(400).json({
@@ -100,7 +99,9 @@ router.put("/:id", (req, res) => {
     const {
         room_number,
         capacity,
-        floor
+        available_capacity,
+        floor,
+        status
     } = req.body;
 
 
@@ -113,22 +114,52 @@ router.put("/:id", (req, res) => {
     }
 
 
+    // If available_capacity is not sent,
+    // use capacity as available capacity.
+    const finalAvailableCapacity =
+        available_capacity !== undefined
+            ? Number(available_capacity)
+            : Number(capacity);
+
+
+    // Calculate status automatically
+    let finalStatus;
+
+    if (finalAvailableCapacity <= 0) {
+
+        finalStatus = "Full";
+
+    } else {
+
+        finalStatus = "Available";
+    }
+
+
     const sql = `
         UPDATE rooms
         SET room_number = ?,
             capacity = ?,
             available_capacity = ?,
-            floor = ?
+            floor = ?,
+            status = ?
         WHERE room_id = ?
     `;
 
 
     const values = [
+
         room_number,
-        capacity,
-        capacity,
-        floor,
+
+        Number(capacity),
+
+        finalAvailableCapacity,
+
+        Number(floor),
+
+        finalStatus,
+
         roomId
+
     ];
 
 
@@ -153,7 +184,15 @@ router.put("/:id", (req, res) => {
 
 
         res.status(200).json({
-            message: "Room updated successfully"
+
+            message: "Room updated successfully",
+
+            available_capacity:
+            finalAvailableCapacity,
+
+            status:
+            finalStatus
+
         });
     });
 });
