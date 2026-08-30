@@ -10,12 +10,16 @@ const worstFit = require("../algorithms/worstFit");
 
 // ==========================================================
 // POST /api/allocate
-// Run allocation algorithm and save results
+// Run First Fit / Best Fit / Worst Fit
 // ==========================================================
 
 router.post("/", (req, res) => {
 
     const { algorithm } = req.body;
+
+    // ------------------------------------------------------
+    // Validate algorithm
+    // ------------------------------------------------------
 
     if (!algorithm) {
 
@@ -32,38 +36,24 @@ router.post("/", (req, res) => {
     ) {
 
         return res.status(400).json({
-
             message: "Invalid algorithm",
-
             availableAlgorithms: [
                 "firstFit",
                 "bestFit",
                 "worstFit"
             ]
-
         });
     }
 
 
-    // ======================================================
-    // GET ROOMS
-    // ======================================================
+    // ------------------------------------------------------
+    // Get rooms
+    // ------------------------------------------------------
 
     const sqlRooms = `
         SELECT *
         FROM rooms
-        ORDER BY room_id
-    `;
-
-
-    // ======================================================
-    // GET GROUPS
-    // ======================================================
-
-    const sqlGroups = `
-        SELECT *
-        FROM student_groups
-        ORDER BY group_id
+        ORDER BY room_id ASC
     `;
 
 
@@ -77,411 +67,327 @@ router.post("/", (req, res) => {
             );
 
             return res.status(500).json({
-
                 message: "Failed to fetch rooms",
-
                 error: roomError.message
-
             });
         }
 
 
-        db.query(sqlGroups, (groupError, groups) => {
+        // --------------------------------------------------
+        // Get student groups
+        // --------------------------------------------------
 
-            if (groupError) {
-
-                console.error(
-                    "Group Error:",
-                    groupError
-                );
-
-                return res.status(500).json({
-
-                    message: "Failed to fetch student groups",
-
-                    error: groupError.message
-
-                });
-            }
+        const sqlGroups = `
+            SELECT *
+            FROM student_groups
+            ORDER BY group_id ASC
+        `;
 
 
-            // ==================================================
-            // CHECK DATA
-            // ==================================================
+        db.query(
+            sqlGroups,
+            (groupError, groups) => {
 
-            if (!rooms || rooms.length === 0) {
+                if (groupError) {
 
-                return res.status(200).json({
+                    console.error(
+                        "Group Error:",
+                        groupError
+                    );
 
-                    algorithm: algorithm,
-
-                    message: "No rooms available",
-
-                    allocations: []
-
-                });
-            }
-
-
-            if (!groups || groups.length === 0) {
-
-                return res.status(200).json({
-
-                    algorithm: algorithm,
-
-                    message: "No student groups available",
-
-                    allocations: []
-
-                });
-            }
-
-
-            // ==================================================
-            // RUN ALGORITHM
-            // ==================================================
-
-            let result;
-
-
-            try {
-
-                if (algorithm === "firstFit") {
-
-                    result =
-                        firstFit(
-                            rooms,
-                            groups
-                        );
-
-                }
-                else if (algorithm === "bestFit") {
-
-                    result =
-                        bestFit(
-                            rooms,
-                            groups
-                        );
-
-                }
-                else {
-
-                    result =
-                        worstFit(
-                            rooms,
-                            groups
-                        );
+                    return res.status(500).json({
+                        message:
+                            "Failed to fetch student groups",
+                        error:
+                        groupError.message
+                    });
                 }
 
 
-            }
-            catch (error) {
+                // ------------------------------------------------
+                // Check data
+                // ------------------------------------------------
 
-                console.error(
-                    "Algorithm Error:",
-                    error
-                );
+                if (!rooms || rooms.length === 0) {
 
-                return res.status(500).json({
-
-                    message:
-                        "Allocation algorithm failed",
-
-                    error:
-                    error.message
-
-                });
-            }
+                    return res.status(200).json({
+                        algorithm: algorithm,
+                        message: "No rooms available",
+                        allocations: []
+                    });
+                }
 
 
-            // ==================================================
-            // NO RESULT
-            // ==================================================
+                if (!groups || groups.length === 0) {
 
-            if (
-                !result ||
-                result.length === 0
-            ) {
-
-                return res.status(200).json({
-
-                    algorithm: algorithm,
-
-                    message:
-                        "No allocation could be generated",
-
-                    allocations: []
-
-                });
-            }
+                    return res.status(200).json({
+                        algorithm: algorithm,
+                        message:
+                            "No student groups available",
+                        allocations: []
+                    });
+                }
 
 
-            // ==================================================
-            // INSERT ALLOCATIONS
-            // ==================================================
+                // ------------------------------------------------
+                // Run selected algorithm
+                // ------------------------------------------------
 
-            const insertSql = `
-                INSERT INTO allocations
-                (
-                    group_id,
-                    room_id,
-                    algorithm,
-                    allocated_capacity,
-                    remaining_capacity,
-                    required_capacity,
-                    status
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `;
+                let result;
 
 
-            let completed = 0;
+                try {
 
-            let responseSent = false;
+                    if (algorithm === "firstFit") {
 
-
-            // ==================================================
-            // PROCESS EACH ALLOCATION
-            // ==================================================
-
-            result.forEach(allocation => {
-
-                const roomId =
-                    allocation.room_id;
-
-
-                const status =
-                    roomId === null ||
-                    roomId === undefined
-                        ? "Not Allocated"
-                        : "Allocated";
-
-
-                const values = [
-
-                    allocation.group_id,
-
-                    roomId,
-
-                    algorithm,
-
-                    allocation.allocated_capacity || 0,
-
-                    allocation.remaining_capacity || 0,
-
-                    allocation.required_capacity || 0,
-
-                    status
-
-                ];
-
-
-                // ==================================================
-                // SAVE ALLOCATION
-                // ==================================================
-
-                db.query(
-                    insertSql,
-                    values,
-                    (insertError) => {
-
-                        if (responseSent) {
-                            return;
-                        }
-
-
-                        if (insertError) {
-
-                            console.error(
-                                "Insert Error:",
-                                insertError
+                        result =
+                            firstFit(
+                                rooms,
+                                groups
                             );
 
-                            responseSent = true;
+                    }
+                    else if (algorithm === "bestFit") {
 
+                        result =
+                            bestFit(
+                                rooms,
+                                groups
+                            );
+
+                    }
+                    else if (algorithm === "worstFit") {
+
+                        result =
+                            worstFit(
+                                rooms,
+                                groups
+                            );
+                    }
+
+                }
+                catch (error) {
+
+                    console.error(
+                        "Algorithm Error:",
+                        error
+                    );
+
+                    return res.status(500).json({
+                        message:
+                            "Allocation algorithm failed",
+                        error:
+                        error.message
+                    });
+                }
+
+
+                // ------------------------------------------------
+                // Check algorithm result
+                // ------------------------------------------------
+
+                if (
+                    !result ||
+                    result.length === 0
+                ) {
+
+                    return res.status(200).json({
+                        algorithm: algorithm,
+                        message:
+                            "No allocation result",
+                        allocations: []
+                    });
+                }
+
+
+                // =================================================
+                // IMPORTANT
+                // Save allocation + update room capacity
+                // using transaction
+                // =================================================
+
+                db.beginTransaction(
+                    transactionError => {
+
+                        if (transactionError) {
+
+                            console.error(
+                                "Transaction Error:",
+                                transactionError
+                            );
 
                             return res.status(500).json({
-
                                 message:
-                                    "Failed to save allocation",
-
+                                    "Failed to start allocation transaction",
                                 error:
-                                insertError.message,
-
-                                code:
-                                insertError.code,
-
-                                sqlMessage:
-                                insertError.sqlMessage
-
+                                transactionError.message
                             });
                         }
 
 
-                        // ==================================================
-                        // UPDATE ROOM CAPACITY
-                        // ==================================================
+                        // ------------------------------------------------
+                        // Clear previous results
+                        // ------------------------------------------------
 
-                        if (
-                            roomId !== null &&
-                            roomId !== undefined
-                        ) {
-
-                            const allocatedCapacity =
-                                Number(
-                                    allocation.allocated_capacity || 0
-                                );
+                        const deleteSql =
+                            "DELETE FROM allocations";
 
 
-                            if (
-                                allocatedCapacity > 0
-                            ) {
+                        db.query(
+                            deleteSql,
+                            deleteError => {
 
-                                const updateRoomSql = `
+                                if (deleteError) {
 
+                                    return db.rollback(
+                                        () => {
+
+                                            console.error(
+                                                "Delete Error:",
+                                                deleteError
+                                            );
+
+                                            res.status(500).json({
+                                                message:
+                                                    "Failed to clear previous allocations",
+                                                error:
+                                                deleteError.message
+                                            });
+                                        }
+                                    );
+                                }
+
+
+                                // ------------------------------------------------
+                                // Reset room available capacity
+                                // ------------------------------------------------
+
+                                const resetRoomsSql = `
                                     UPDATE rooms
-
-                                    SET available_capacity =
-                                        GREATEST(
-                                            available_capacity - ?,
-                                            0
-                                        ),
-
-                                        status =
-                                        CASE
-
-                                            WHEN
-                                                GREATEST(
-                                                    available_capacity - ?,
-                                                    0
-                                                ) = 0
-
-                                            THEN 'Full'
-
-                                            ELSE 'Available'
-
-                                        END
-
-                                    WHERE room_id = ?
-
+                                    SET available_capacity = capacity,
+                                        status = 'Available'
                                 `;
 
 
                                 db.query(
+                                    resetRoomsSql,
+                                    resetError => {
 
-                                    updateRoomSql,
+                                        if (resetError) {
 
-                                    [
-                                        allocatedCapacity,
-                                        allocatedCapacity,
-                                        roomId
-                                    ],
+                                            return db.rollback(
+                                                () => {
 
-                                    (updateError) => {
+                                                    console.error(
+                                                        "Reset Room Error:",
+                                                        resetError
+                                                    );
 
-                                        if (
-                                            responseSent
-                                        ) {
-                                            return;
-                                        }
-
-
-                                        if (
-                                            updateError
-                                        ) {
-
-                                            console.error(
-                                                "Room Update Error:",
-                                                updateError
+                                                    res.status(500).json({
+                                                        message:
+                                                            "Failed to reset room capacity",
+                                                        error:
+                                                        resetError.message
+                                                    });
+                                                }
                                             );
-
-
-                                            responseSent =
-                                                true;
-
-
-                                            return res.status(500).json({
-
-                                                message:
-                                                    "Allocation saved but room capacity update failed",
-
-                                                error:
-                                                updateError.message
-
-                                            });
                                         }
 
 
-                                        completed++;
+                                        // ------------------------------------------------
+                                        // Save each allocation
+                                        // ------------------------------------------------
+
+                                        saveAllocations(
+                                            0,
+                                            result,
+                                            algorithm,
+                                            db,
+                                            error => {
+
+                                                if (error) {
+
+                                                    return db.rollback(
+                                                        () => {
+
+                                                            console.error(
+                                                                "Save Allocation Error:",
+                                                                error
+                                                            );
+
+                                                            res.status(500).json({
+                                                                message:
+                                                                    "Failed to save allocation",
+                                                                error:
+                                                                error.message
+                                                            });
+                                                        }
+                                                    );
+                                                }
 
 
-                                        sendFinalResponse();
+                                                // ------------------------------------------------
+                                                // Commit transaction
+                                                // ------------------------------------------------
+
+                                                db.commit(
+                                                    commitError => {
+
+                                                        if (commitError) {
+
+                                                            return db.rollback(
+                                                                () => {
+
+                                                                    console.error(
+                                                                        "Commit Error:",
+                                                                        commitError
+                                                                    );
+
+                                                                    res.status(500).json({
+                                                                        message:
+                                                                            "Failed to complete allocation",
+                                                                        error:
+                                                                        commitError.message
+                                                                    });
+                                                                }
+                                                            );
+                                                        }
+
+
+                                                        // ------------------------------------------------
+                                                        // SUCCESS
+                                                        // ------------------------------------------------
+
+                                                        return res.status(200).json({
+
+                                                            algorithm:
+                                                            algorithm,
+
+                                                            message:
+                                                                "Allocation completed and saved successfully",
+
+                                                            allocations:
+                                                            result
+
+                                                        });
+
+                                                    }
+                                                );
+
+                                            }
+                                        );
 
                                     }
                                 );
 
                             }
-                            else {
-
-                                completed++;
-
-                                sendFinalResponse();
-
-                            }
-
-                        }
-                        else {
-
-                            completed++;
-
-                            sendFinalResponse();
-
-                        }
-
-
-                        // ==================================================
-                        // FINAL RESPONSE
-                        // ==================================================
-
-                        function sendFinalResponse() {
-
-                            if (
-                                completed ===
-                                result.length
-                            ) {
-
-                                if (
-                                    responseSent
-                                ) {
-                                    return;
-                                }
-
-
-                                responseSent =
-                                    true;
-
-
-                                return res.status(200).json({
-
-                                    algorithm:
-                                    algorithm,
-
-                                    message:
-                                        "Allocation completed and room capacity updated successfully",
-
-                                    allocations:
-                                    result
-
-                                });
-                            }
-                        }
+                        );
 
                     }
                 );
 
-            });
-
-        });
+            }
+        );
 
     });
 
@@ -489,38 +395,188 @@ router.post("/", (req, res) => {
 
 
 // ==========================================================
-// GET ALL ALLOCATIONS
+// SAVE ALLOCATIONS
+// ==========================================================
+
+function saveAllocations(
+    index,
+    allocations,
+    algorithm,
+    db,
+    callback
+) {
+
+    // All allocations saved
+    if (
+        index >=
+        allocations.length
+    ) {
+
+        return callback(null);
+    }
+
+
+    const allocation =
+        allocations[index];
+
+
+    const status =
+        allocation.room_id === null
+            ? "Not Allocated"
+            : "Allocated";
+
+
+    // --------------------------------------------------------
+    // Insert allocation
+    // --------------------------------------------------------
+
+    const insertSql = `
+        INSERT INTO allocations
+        (
+            group_id,
+            room_id,
+            algorithm,
+            required_capacity,
+            allocated_capacity,
+            remaining_capacity,
+            status
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+
+
+    const values = [
+
+        allocation.group_id,
+
+        allocation.room_id,
+
+        algorithm,
+
+        allocation.required_capacity,
+
+        allocation.allocated_capacity,
+
+        allocation.remaining_capacity,
+
+        status
+
+    ];
+
+
+    db.query(
+        insertSql,
+        values,
+        (insertError, result) => {
+
+            if (insertError) {
+
+                return callback(
+                    insertError
+                );
+            }
+
+
+            // ------------------------------------------------
+            // If room allocated
+            // update actual room capacity
+            // ------------------------------------------------
+
+            if (
+                allocation.room_id !== null
+            ) {
+
+                const updateRoomSql = `
+                    UPDATE rooms
+                    SET available_capacity = ?,
+                        status = ?
+                    WHERE room_id = ?
+                `;
+
+
+                const roomStatus =
+                    Number(
+                        allocation.remaining_capacity
+                    ) > 0
+                        ? "Available"
+                        : "Full";
+
+
+                const roomValues = [
+
+                    allocation.remaining_capacity,
+
+                    roomStatus,
+
+                    allocation.room_id
+
+                ];
+
+
+                db.query(
+                    updateRoomSql,
+                    roomValues,
+                    updateError => {
+
+                        if (updateError) {
+
+                            return callback(
+                                updateError
+                            );
+                        }
+
+
+                        // Save next allocation
+                        saveAllocations(
+                            index + 1,
+                            allocations,
+                            algorithm,
+                            db,
+                            callback
+                        );
+
+                    }
+                );
+
+            }
+            else {
+
+                // No room allocated
+                saveAllocations(
+                    index + 1,
+                    allocations,
+                    algorithm,
+                    db,
+                    callback
+                );
+
+            }
+
+        }
+    );
+}
+
+
+// ==========================================================
 // GET /api/allocate
+// Get allocation history/results
 // ==========================================================
 
 router.get("/", (req, res) => {
 
     const sql = `
-
         SELECT
-
             a.allocation_id,
-
             a.group_id,
-
             a.room_id,
-
             a.algorithm,
-
             a.required_capacity,
-
             a.allocated_capacity,
-
             a.remaining_capacity,
-
             a.status,
-
             a.allocation_date
-
         FROM allocations a
-
-        ORDER BY a.allocation_id DESC
-
+        ORDER BY a.allocation_id ASC
     `;
 
 
@@ -535,15 +591,11 @@ router.get("/", (req, res) => {
                     error
                 );
 
-
                 return res.status(500).json({
-
                     message:
                         "Failed to fetch allocations",
-
                     error:
                     error.message
-
                 });
             }
 
@@ -565,8 +617,8 @@ router.get("/", (req, res) => {
 
 
 // ==========================================================
-// DELETE ALL ALLOCATIONS
 // DELETE /api/allocate
+// Clear allocation results
 // ==========================================================
 
 router.delete("/", (req, res) => {
@@ -581,30 +633,60 @@ router.delete("/", (req, res) => {
 
             if (err) {
 
-                console.error(err);
-
+                console.error(
+                    "Clear Allocation Error:",
+                    err
+                );
 
                 return res.status(500).json({
-
                     message:
                         "Failed to clear allocations",
-
                     error:
                     err.message
-
                 });
             }
 
 
-            res.status(200).json({
+            // Reset rooms after clearing allocations
+            const resetSql = `
+                UPDATE rooms
+                SET available_capacity = capacity,
+                    status = 'Available'
+            `;
 
-                message:
-                    "All allocation results cleared successfully",
 
-                deletedRecords:
-                result.affectedRows
+            db.query(
+                resetSql,
+                resetError => {
 
-            });
+                    if (resetError) {
+
+                        console.error(
+                            "Room Reset Error:",
+                            resetError
+                        );
+
+                        return res.status(500).json({
+                            message:
+                                "Allocations cleared but room reset failed",
+                            error:
+                            resetError.message
+                        });
+                    }
+
+
+                    return res.status(200).json({
+
+                        message:
+                            "All allocation results cleared successfully",
+
+                        deletedRecords:
+                        result.affectedRows
+
+                    });
+
+                }
+            );
 
         }
     );

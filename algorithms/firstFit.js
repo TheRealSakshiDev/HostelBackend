@@ -1,57 +1,91 @@
 function firstFit(rooms, groups) {
 
-    // Make a copy so original room data is not changed
+    // Copy rooms so original database data is not modified
     const availableRooms = rooms.map(room => ({
-        ...room
+        ...room,
+        available_capacity: Number(room.available_capacity)
     }));
 
     const allocations = [];
 
-    // Process each student group
+    // Process groups one by one
     for (const group of groups) {
+
+        const requiredCapacity =
+            Number(group.required_capacity);
 
         let allocated = false;
 
-        // Check rooms from the beginning
+        // Check rooms from first to last
         for (const room of availableRooms) {
 
-            // First room that can accommodate the group
-            if (room.available_capacity >= group.required_capacity) {
+            // First suitable room
+            if (
+                room.available_capacity >=
+                requiredCapacity
+            ) {
 
                 const remainingCapacity =
-                    room.available_capacity - group.required_capacity;
+                    room.available_capacity -
+                    requiredCapacity;
 
                 allocations.push({
+
                     group_id: group.group_id,
+
                     group_name: group.group_name,
-                    required_capacity: group.required_capacity,
+
+                    required_capacity:
+                    requiredCapacity,
+
                     room_id: room.room_id,
-                    room_number: room.room_number,
-                    allocated_capacity: group.required_capacity,
-                    remaining_capacity: remainingCapacity
+
+                    room_number:
+                    room.room_number,
+
+                    allocated_capacity:
+                    requiredCapacity,
+
+                    remaining_capacity:
+                    remainingCapacity,
+
+                    status: "Allocated"
                 });
 
-                // Update room's remaining capacity
-                room.available_capacity = remainingCapacity;
+                // Update temporary room capacity
+                room.available_capacity =
+                    remainingCapacity;
 
                 allocated = true;
 
-                // Stop checking rooms for this group
+                // First Fit → stop searching
                 break;
             }
         }
 
-        // If no room can accommodate the group
+
+        // No suitable room
         if (!allocated) {
 
             allocations.push({
-                group_id: group.group_id,
-                group_name: group.group_name,
-                required_capacity: group.required_capacity,
+
+                group_id:
+                group.group_id,
+
+                group_name:
+                group.group_name,
+
+                required_capacity:
+                requiredCapacity,
+
                 room_id: null,
+
                 room_number: null,
+
                 allocated_capacity: 0,
+
                 remaining_capacity: null,
+
                 status: "Not Allocated"
             });
         }
@@ -59,5 +93,6 @@ function firstFit(rooms, groups) {
 
     return allocations;
 }
+
 
 module.exports = firstFit;
